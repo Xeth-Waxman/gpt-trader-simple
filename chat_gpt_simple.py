@@ -2,6 +2,11 @@ import requests
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import logging
+import configparser
+
+logger = logging.getLogger("yfinance")
+logger.setLevel(logging.ERROR)
 
 def get_stock_data(symbol):
     data = yf.download(symbol, period='max', group_by='ticker')
@@ -32,16 +37,6 @@ def backtest_strategy(data, short_window=50, long_window=200, initial_capital=10
     # Count the number of trades
     num_trades = sum(abs(df['Position'].diff()) > 0)
     
-    # print out relevant information
-    print(f"Backtesting results for {data.columns[-1]}:")
-    print(f"  Initial capital: {initial_capital}")
-    print(f"  Short window: {short_window}")
-    print(f"  Long window: {long_window}")
-    print(f"  Total return: {df['Total Holdings'][-1] / initial_capital - 1:.2%}")
-    print(f"  Annualized return: {((df['Total Holdings'][-1] / initial_capital) ** (252 / len(df)) - 1):.2%}")
-    print(f"  Maximum drawdown: {((df['Total Holdings'].max() - df['Total Holdings']) / df['Total Holdings'].max()).max():.2%}")
-    print(f"  Number of trades: {num_trades}")
-    
     return df
 
 def print_signals(df, symbol):
@@ -55,10 +50,9 @@ def print_signals(df, symbol):
             elif df['Position'][i] == -1:
                 print(f"SELL {symbol} at {df['4. close'][i]} on {df.index[i].date()}")
 
-def generate_and_backtest_signals(api_key, symbol, short_window=3, long_window=20, initial_capital=10000):
+def generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=10000):
     try:
         # Step 1: Get historical stock data
-        print(f"Retrieving data for {symbol}...")
         data = get_stock_data(symbol)
 
         # Step 2: Generate signals and backtest strategy
@@ -72,7 +66,7 @@ def generate_and_backtest_signals(api_key, symbol, short_window=3, long_window=2
             elif df['Position'][i] == -1:
                 signals.append(('SELL', df['4. close'][i], df.index[i].date()))
 
-        return signals
+        return df, signals
 
     except KeyError:
         print(f"Invalid symbol {symbol}")
@@ -80,12 +74,25 @@ def generate_and_backtest_signals(api_key, symbol, short_window=3, long_window=2
         print(f"Error: {e}")
 
 # Example usage
-api_key = 'ZG5MLKJMUZ2UEAJ8'
+config = configparser.ConfigParser()
+config.read('config.ini')
+api_key = config.get('API', 'key')
 dow_jones_symbols = ['AAPL', 'AXP', 'BA', 'CAT', 'CSCO', 'CVX', 'DIS', 'DOW', 'GS', 'HD', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM', 'MRK', 'MSFT', 'NKE', 'PG', 'PFE', 'TRV', 'UNH', 'RTX', 'VZ', 'V', 'WBA', 'WMT', 'XOM']
 
+results = []
+initial_capital = 10000
+
 for symbol in dow_jones_symbols:
-    signals = generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=10000)
-    # print(f"Signals for {symbol}:")
-    # for signal in signals:
-    #    print(signal)
-    print() # print an empty line to separate the signals for different stocks
+    df, signals = generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=initial_capital)
+    annualized_return = ((df['Total Holdings'][-1] / initial_capital) ** (252 / len(df))) - 1
+    total_return = ((df['Total Holdings'][-1] / initial_capital) - 1) * 100
+    num_trades = sum(abs(df['Position'].diff()) > 0)
+    results.append((symbol, annualized_return, total_return, num_trades))
+
+# Sort results by annualized return in descending order
+results.sort(key=lambda x: x[1], reverse=True)
+
+# Print results
+print("Results:")
+for result in results:
+    print(f"{result[0]}: {result[1]:.2%} ({result[2]:.2f}%), {result[3]} trades")
