@@ -10,7 +10,7 @@ def get_stock_data(symbol):
     data = data.dropna()
     return data
 
-def generate_signals(df, short_window=3, long_window=20):
+def generate_signals(df, short_window=50, long_window=200):
     df[f'SMA{short_window}'] = df['4. close'].rolling(window=short_window).mean()
     df[f'SMA{long_window}'] = df['4. close'].rolling(window=long_window).mean()
     df['Signal'] = 0.0
@@ -18,7 +18,7 @@ def generate_signals(df, short_window=3, long_window=20):
     df['Position'] = df['Signal'].diff()
     return df
 
-def backtest_strategy(data, short_window=3, long_window=20, initial_capital=10000):
+def backtest_strategy(data, short_window=50, long_window=200, initial_capital=10000):
     df = data.copy()
     df = generate_signals(df, short_window, long_window)
     df['Returns'] = df['4. close'].pct_change() * df['Position'].shift(1)
@@ -29,6 +29,9 @@ def backtest_strategy(data, short_window=3, long_window=20, initial_capital=1000
     df['Total Holdings'] = df['Cash'] + df['Portfolio Holdings']
     df['Returns'] = df['Total Holdings'].pct_change()
     
+    # Count the number of trades
+    num_trades = sum(abs(df['Position'].diff()) > 0)
+    
     # print out relevant information
     print(f"Backtesting results for {data.columns[-1]}:")
     print(f"  Initial capital: {initial_capital}")
@@ -37,6 +40,7 @@ def backtest_strategy(data, short_window=3, long_window=20, initial_capital=1000
     print(f"  Total return: {df['Total Holdings'][-1] / initial_capital - 1:.2%}")
     print(f"  Annualized return: {((df['Total Holdings'][-1] / initial_capital) ** (252 / len(df)) - 1):.2%}")
     print(f"  Maximum drawdown: {((df['Total Holdings'].max() - df['Total Holdings']) / df['Total Holdings'].max()).max():.2%}")
+    print(f"  Number of trades: {num_trades}")
     
     return df
 
@@ -80,4 +84,4 @@ api_key = 'ZG5MLKJMUZ2UEAJ8'
 symbols = ['MSFT', 'LPLA', 'IBM']
 
 for symbol in symbols:
-    generate_and_backtest_signals(api_key, symbol, short_window=3, long_window=20, initial_capital=10000)
+    generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=10000)
