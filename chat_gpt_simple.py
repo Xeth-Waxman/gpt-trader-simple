@@ -81,7 +81,11 @@ def generate_and_backtest_signals(api_key, symbol, short_window=3, long_window=2
 
 # Example usage
 api_key = 'ZG5MLKJMUZ2UEAJ8'
-symbols = ['MSFT', 'LPLA', 'IBM']
+dow_jones_symbols = ['AAPL', 'AXP', 'BA', 'CAT', 'CSCO', 'CVX', 'DIS', 'DOW', 'GS', 'HD', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM', 'MRK', 'MSFT', 'NKE', 'PG', 'PFE', 'TRV', 'UNH', 'RTX', 'VZ', 'V', 'WBA', 'WMT', 'XOM']
 
-for symbol in symbols:
-    generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=10000)
+for symbol in dow_jones_symbols:
+    signals = generate_and_backtest_signals(api_key, symbol, short_window=50, long_window=200, initial_capital=10000)
+    # print(f"Signals for {symbol}:")
+    # for signal in signals:
+    #    print(signal)
+    print() # print an empty line to separate the signals for different stocks
